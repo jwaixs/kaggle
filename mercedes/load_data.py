@@ -1,9 +1,9 @@
 import pandas as pd
 import numpy as np
 
-train_df = pd.read_csv('/home/noud/data/kaggle/mercedes/train.csv')
-test_df = pd.read_csv('/home/noud/data/kaggle/mercedes/test.csv')
-submission = pd.read_csv('/home/noud/data/kaggle/mercedes/sample_submission.csv')
+train_df = pd.read_csv('/data/kaggle/mercedes/train.csv')
+test_df = pd.read_csv('/data/kaggle/mercedes/test.csv')
+submission = pd.read_csv('/data/kaggle/mercedes/sample_submission.csv')
 
 X_train = train_df.drop(['y'], axis = 1)
 y_train = train_df['y']
