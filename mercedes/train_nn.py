@@ -1,74 +1,171 @@
 import numpy as np
 import pandas as pd
+import copy
 import torch
 import torch.nn.functional as F
 import torch.utils.data as data_utils
 
 from torch.autograd import Variable
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold
 from load_data import X_train, y_train, X_test
 
 torch.manual_seed(0)
 
-X_train, X_valid, y_train, y_valid = train_test_split(
-    X_train.values, y_train.values, test_size = 0.33, random_state = 42
-)
+use_gpu = torch.cuda.is_available()
 
-X_train_tensor = torch.FloatTensor(X_train)
-y_train_tensor = torch.FloatTensor(y_train)
-X_valid_tensor = torch.FloatTensor(X_valid)
-y_valid_tensor = torch.FloatTensor(y_valid)
-
-train = data_utils.TensorDataset(X_train_tensor, y_train_tensor)
-train_loader = data_utils.DataLoader(train, batch_size = 50, shuffle = True)
-valid = data_utils.TensorDataset(X_valid_tensor, y_valid_tensor)
-valid_loader = data_utils.DataLoader(valid, batch_size = 50, shuffle = True)
 
 class NNet(torch.nn.Module):
-    def __init__(self, n_features, n_hidden, n_output):
+    def __init__(self, n_features, n_hidden1, n_hidden2, n_output):
         super(NNet, self).__init__()
-        self.hidden = torch.nn.Linear(n_features, n_hidden)
-        self.predict = torch.nn.Linear(n_hidden, n_output)
+        self.hidden1 = torch.nn.Linear(n_features, n_hidden1)
+        self.hidden2 = torch.nn.Linear(n_hidden1, n_hidden2)
+        self.predict = torch.nn.Linear(n_hidden2, n_output)
 
     def forward(self, x):
-        x = F.relu(self.hidden(x))
+        x = F.relu(self.hidden1(x))
+        x = F.relu(self.hidden2(x))
         x = self.predict(x)
         return x
 
-net = NNet(n_features = X_train.shape[1], n_hidden = 1024, n_output = 1)
+net = NNet(n_features = X_train.shape[1], n_hidden1 = 32, n_hidden2 = 16, n_output = 1)
+if use_gpu:
+    net = net.cuda()
 print(net)
 
-optimizer = torch.optim.Adam(net.parameters(), lr = 0.1)
+optimizer = torch.optim.Rprop(net.parameters(), lr = 0.001)
 loss_func = torch.nn.MSELoss()
 
-for epoch in range(100):
-    print('Start epoch: {}'.format(epoch))
+def train_valid_model(model, tloader, vloader, n_epochs = 100):
+    best_valid_loss = None
+    best_valid_model = None
+    best_valid_epoch = None
 
-    train_loss = list()
-    for features, labels in train_loader:
-        features = Variable(features)
-        labels = Variable(labels)
+    for epoch in range(n_epochs):
+        train_loss = list()
+        for features, labels in tloader:
+            if use_gpu:
+                features = Variable(features.cuda())
+                labels = Variable(labels.cuda()).float()
+            else:
+                features = Variable(features)
+                labels = Variable(labels).float()
 
-        predictions = net(features)
-        loss = loss_func(predictions, labels.float())
+            predictions = model(features)
+            loss = loss_func(predictions, labels)
 
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-        train_loss.append(loss.data[0])
+            train_loss.append(loss.data[0])
 
+        valid_loss = list()
+        for features, labels in vloader:
+            if use_gpu:
+                features = Variable(features.cuda())
+                labels = Variable(labels.cuda()).float()
+            else:
+                features = Variable(features)
+                labels = Variable(labels).float()
+
+            predictions = model(features)
+            loss = loss_func(predictions, labels)
+
+            valid_loss.append(loss.data[0])
+
+        vloss = sum(valid_loss) / len(valid_loss)
+
+        if best_valid_loss == None or vloss < best_valid_loss:
+            best_valid_loss = vloss
+            best_valid_model = copy.deepcopy(model)
+            best_valid_epoch = epoch
+
+    return best_valid_loss, best_valid_epoch, best_valid_model
+
+def train_model(model, tloader, n_epochs = 100):
+    for epoch in range(n_epochs):
+        train_loss = list()
+        for features, labels in tloader:
+            if use_gpu:
+                features = Variable(features.cuda())
+                labels = Variable(labels.cuda()).float()
+            else:
+                features = Variable(features)
+                labels = Variable(labels).float()
+
+            predictions = model(features)
+            loss = loss_func(predictions, labels)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            train_loss.append(loss.data[0])
+
+    return model, train_loss[-1]
+
+def nn_train(X, y):
+    X_train_tensor = torch.FloatTensor(X.values)
+    y_train_tensor = torch.FloatTensor(y.values)
+
+    train = data_utils.TensorDataset(X_train_tensor, y_train_tensor)
+    train_loader = data_utils.DataLoader(train, batch_size = 200, shuffle = True)
+
+    model, loss = train_model(net, train_loader, n_epochs = 747)
+
+    return model, loss
+
+def nn_cv(X, y, n_splits = 5):
     valid_loss = list()
-    for features, labels in valid_loader:
-        features = Variable(features)
-        labels = Variable(labels)
+    valid_epoch = list()
 
-        predictions = net(features)
-        loss = loss_func(predictions, labels.float())
+    kf = KFold(n_splits = n_splits)
 
-        valid_loss.append(loss.data[0])
+    for train, valid in kf.split(X_train):
+        _X_train = X.ix[train]
+        _y_train = y.ix[train]
+        _X_valid = X.ix[valid]
+        _y_valid = y.ix[valid]
 
-    print('Train loss: {}'.format(sum(train_loss) / len(train_loss)))
-    print('Valid loss: {}'.format(sum(valid_loss) / len(valid_loss)))
+        _X_train_tensor = torch.FloatTensor(_X_train.values)
+        _y_train_tensor = torch.FloatTensor(_y_train.values)
+        _X_valid_tensor = torch.FloatTensor(_X_valid.values)
+        _y_valid_tensor = torch.FloatTensor(_y_valid.values)
 
+        train = data_utils.TensorDataset(_X_train_tensor, _y_train_tensor)
+        train_loader = data_utils.DataLoader(train, batch_size = 50, shuffle = True)
+        valid = data_utils.TensorDataset(_X_valid_tensor, _y_valid_tensor)
+        valid_loader = data_utils.DataLoader(valid, batch_size = 50, shuffle = True)
 
+        loss, epoch, model = train_valid_model(net, train_loader, valid_loader)
+        valid_loss.append(loss)
+        valid_epoch.append(epoch)
+
+        print('Finished fold, loss: {}'.format(loss)) 
+
+    return valid_loss, valid_epoch
+
+vloss, vepochs = nn_cv(X_train, y_train)
+print(np.mean(vloss), np.std(vloss), np.mean(vepochs), np.std(vepochs))
+
+def predict(model, X):
+    X_test_tensor = torch.FloatTensor(X.values)
+    y_test_tensor = torch.zeros(len(X.values))
+    test = data_utils.TensorDataset(X_test_tensor, y_test_tensor)
+    test_loader = data_utils.DataLoader(test, batch_size = 200, shuffle = False)
+
+    all_predictions = list()
+    for features, _ in test_loader:
+        if use_gpu:
+            features = Variable(features.cuda())
+        else:
+            features = Variable(features)
+
+        predictions = model(features)
+
+        for i in range(len(predictions)):
+            all_predictions.append(predictions.data[i][0])
+
+    return all_predictions
+
+#model, loss = nn_train(X_train, y_train)
