@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
 
+from datacleaner import autoclean
+from sklearn.decomposition import PCA, FastICA
+
 train_df = pd.read_csv('/data/kaggle/mercedes/train.csv')
 test_df = pd.read_csv('/data/kaggle/mercedes/test.csv')
 submission = pd.read_csv('/data/kaggle/mercedes/sample_submission.csv')
@@ -25,3 +28,14 @@ for cfname in categorical_features:
     cf_conversion = dict(zip(unique_features, range(len(unique_features))))
     X_train[cfname] = X_train[cfname].apply(lambda x : cf_conversion[x])
     X_test[cfname] = X_test[cfname].apply(lambda x : cf_conversion[x])
+
+# Compute some dimensionality reduction features
+pca = PCA(n_components = 256, random_state = 0)
+pca.fit(X_train)
+X_train_pca = pca.transform(X_train)
+X_test_pca = pca.transform(X_test)
+
+ica = FastICA(n_components = 256, random_state = 0)
+ica.fit(X_train)
+X_train_ica = ica.transform(X_train)
+X_test_ica = ica.transform(X_test)
