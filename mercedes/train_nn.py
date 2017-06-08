@@ -27,13 +27,17 @@ class NNet(torch.nn.Module):
         x = self.predict(x)
         return x
 
-net = NNet(n_features = X_train.shape[1], n_hidden1 = 32, n_hidden2 = 16, n_output = 1)
+net = NNet(n_features = X_train.shape[1], n_hidden1 = 128, n_hidden2 = 16, n_output = 1)
 if use_gpu:
     net = net.cuda()
 print(net)
 
 optimizer = torch.optim.Rprop(net.parameters(), lr = 0.001)
-loss_func = torch.nn.MSELoss()
+#loss_func = torch.nn.MSELoss()
+def loss_func(y_pred, y_true):
+    SS_res = torch.sum(torch.pow(y_true - y_pred, 2))
+    SS_tot = torch.sum(torch.pow(torch.add(y_true, -torch.mean(y_pred).data[0]), 2))
+    return -(1 - SS_res / SS_tot)
 
 def train_valid_model(model, tloader, vloader, n_epochs = 100):
     best_valid_loss = None
