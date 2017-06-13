@@ -58,43 +58,6 @@ def find_semi_optimal_params_ridge(X, y):
     rf_params['min_samples_split'] = best_min_samples_split
     rf_params['min_samples_leaf'] = best_min_samples_leaf
 
-    return rf_params
-
-    rf_pipe = RandomForestRegressor(**rf_params)
-
-    print('Find (semi-)optimal fit_intercept, and normalize.')
-    rf_search = {
-        'fit_intercept' : [True, False],
-        'normalize' : [True, False],
-    }
-    gs_clf = GridSearchCV(rf_pipe, rf_search, cv = 10, scoring = 'r2', n_jobs = -1)
-    gs_clf.fit(X, y)
-
-    best_fit_intercept = gs_clf.best_estimator_.fit_intercept
-    best_normalize = gs_clf.best_estimator_.normalize
-    print('Best score: {} (fit_intercept = {}, normalize = {})'.format(
-        gs_clf.best_score_, best_fit_intercept, best_normalize
-    ))
-
-    rf_params['fit_intercept'] = best_fit_intercept
-    rf_params['normalize'] = best_normalize
-    rf_pipe = RandomForestRegressor(**rf_params)
-
-
-    print('Find (semi-)optimal tolerance (tol).')
-    rf_search = {
-        'tol' : [0.1, 0.01, 0.001, 0.0001, 0.00001],
-    }
-    gs_clf = GridSearchCV(rf_pipe, rf_search, cv = 10, scoring = 'r2', n_jobs = -1)
-    gs_clf.fit(X, y)
-
-    best_tol = gs_clf.best_estimator_.tol
-    print('Best score: {} (tol = {})'.format(
-        gs_clf.best_score_, best_tol
-    ))
-
-    rf_params['tol'] = best_tol
-
     rf_pipe = RandomForestRegressor(**rf_params)
 
     print('Test some random seeds')
