@@ -23,13 +23,8 @@ for c in classes:
                 'annotations' : elm['annotations']
             }
 
-def load_image(img_name):
-    info = image_info[img_name]
-    class_dir = info['class'].upper()
-    image_file = os.path.join(data_dir, 'train/{}/{}'.format(class_dir, img_name))
-    annotation = info['annotations']
-
-    image = cv2.imread(image_file)
+def show_image(img_name):
+    image, annotation = load_image(img_name)
     plt.imshow(image)
 
     currentAxis = plt.gca()
@@ -41,6 +36,17 @@ def load_image(img_name):
 
     plt.show()
 
-for img_name in random.sample(image_info.keys(), 10):
-    print('Load: {} {}'.format(img_name, image_info[img_name]['class']))
-    load_image(img_name)
+def load_image(img_name):
+    info = image_info[img_name]
+    class_dir = info['class'].upper()
+    image_file = os.path.join(data_dir, 'train/{}/{}'.format(class_dir, img_name))
+    annotation = info['annotations']
+
+    image = cv2.imread(image_file)
+
+    return image, annotation
+
+def show_random_images():
+    for img_name in random.sample(image_info.keys(), 10):
+        print('Load: {} {}'.format(img_name, image_info[img_name]['class']))
+        show_image(img_name)
