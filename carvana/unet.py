@@ -80,7 +80,7 @@ class unet_256(nn.Module):
         out = self.middle(out)
 
         out = F.upsample(out, scale_factor = 2)
-        out = toch.cat([down4, out], 1)
+        out = torch.cat([down4, out], 1)
         out = self.up4(out)
 
         out = F.upsample(out, scale_factor = 2)
