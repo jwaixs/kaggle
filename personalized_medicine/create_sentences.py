@@ -19,15 +19,21 @@ def text2sentences(s):
         b2 = sentence_index[i+1]
         sentence = tokens[b1+1:b2]
         sentences.append(list(sentence))
-    sentences.append(s[b2+1:])
     return sentences
 
 def generate_lines(sentences):
     for sentence in sentences:
         yield sentence
 
-sentences = list()
-for i in tqdm(train_text_df.index):
+def get_sentences():
+    sentences = list()
+    for i in tqdm(train_text_df.index):
+        s = train_text_df.ix[i]['Text']
+        s_sen = text2sentences(s)
+        sentences.extend(s_sen)
+    return sentences
+
+def get_report(i):
     s = train_text_df.ix[i]['Text']
     s_sen = text2sentences(s)
-    sentences.extend(s_sen)
+    return s_sen

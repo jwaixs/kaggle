@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 
-data_dir = '/data/kaggle/personalized_medicine/'
+data_dir = '/data/noud/kaggle/personalized_medicine'
 
 test_text_file = os.path.join(data_dir, 'test_text')
 test_variants_file = os.path.join(data_dir, 'test_variants')

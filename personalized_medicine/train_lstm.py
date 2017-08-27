@@ -7,6 +7,8 @@ from torch import optim, nn
 
 import gensim
 
+from create_sentences import get_report
+
 def to_torch_var(var, **args):
     if torch.cuda.is_available():
         return torch.autograd.Variable(var.cuda(), **args)
@@ -32,54 +34,32 @@ class LSTMNet(torch.nn.Module):
 
 word2vec_model = gensim.models.Word2Vec.load('./train.word2vec')
 
-sentence = [u'previous',
-             u'work',
-             u'has',
-             u'shown',
-             u'that',
-             u'cdk10',
-             u'silencing',
-             u'increases',
-             u'ets2',
-             u'(',
-             u'v-ets',
-             u'erythroblastosis',
-             u'virus',
-             u'e26',
-             u'oncogene',
-             u'homolog',
-             u'2',
-             u')',
-             u'-driven',
-             u'activation',
-             u'of',
-             u'the',
-             u'mapk',
-             u'pathway',
-             u',',
-             u'which',
-             u'confers',
-             u'tamoxifen',
-             u'resistance',
-             u'to',
-             u'breast',
-             u'cancer',
-             u'cells']
 
-w2v_sentence = np.array(map(lambda e : word2vec_model[e], sentence))
-shape = w2v_sentence.shape
-w2v_sentence.resize((shape[0], 1, shape[1]))
+def get_report_vec(i):
+    sentence = [w for s in get_report(0) for w in s]
+    w2v_sentence = list()
+    for w in sentence:
+        if w in word2vec_model:
+            w2vw = word2vec_model[w]
+            w2v_sentence.append(w2vw)
+    w2v_sentence = np.array(w2v_sentence)
+    shape = w2v_sentence.shape
+    w2v_sentence.resize((shape[0], 1, shape[1]))
 
-rnn = LSTMNet(100, 128, 7).cuda()
+    return w2v_sentence, i%7
+
+rnn = LSTMNet(100, 1024, 7).cuda()
 loss = torch.nn.CrossEntropyLoss(size_average = True)
-optimizer = optim.SGD(rnn.parameters(), lr = 0.1, momentum = 0.9)
+optimizer = optim.SGD(rnn.parameters(), lr = 0.01, momentum = 0.9)
 
-for i in range(10):
-    x = to_torch_var(torch.from_numpy(w2v_sentence))
-    y = to_torch_var(torch.from_numpy(np.array([1])))
+for i in range(250):
+    mod = 2
+    xvec, yvec = get_report_vec(i%mod)
+    x = to_torch_var(torch.from_numpy(xvec))
+    y = to_torch_var(torch.from_numpy(np.array([yvec])))
     optimizer.zero_grad()
     fx = rnn.forward(x)
     output = loss.forward(fx, y)
     output.backward()
     optimizer.step()
-    print(i, fx, output.data[0])
+    print(i%mod, fx, output.data[0])
