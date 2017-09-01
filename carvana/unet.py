@@ -79,21 +79,47 @@ class unet_256(nn.Module):
 
         out = self.middle(out)
 
-        out = F.upsample(out, scale_factor = 2)
-        out = toch.cat([down4, out], 1)
-        out = self.up4(out)
+        out = F.upsample_bilinear(out, scale_factor = 2)
+        out = torch.cat([down4, out], 1)
+        out = self.up_4(out)
 
-        out = F.upsample(out, scale_factor = 2)
+        out = F.upsample_bilinear(out, scale_factor = 2)
         out = torch.cat([down3, out], 1)
         out = self.up_3(out)
 
-        out = F.upsample(out, scale_factor = 2)
+        out = F.upsample_bilinear(out, scale_factor = 2)
         out = torch.cat([down2, out], 1)
         out = self.up_2(out)
 
-        out = F.upsample(out, scale_factor = 2)
+        out = F.upsample_bilinear(out, scale_factor = 2)
         out = torch.cat([down1, out], 1)
         out = self.up_1(out)
 
-        out = F.upsample(out, scale_factor = 2)
+        out = F.upsample_bilinear(out, scale_factor = 2)
         return self.output(out)
+
+if __name__ == '__main__':
+    from carvana import CARVANA
+    ds = CARVANA('/data/noud/kaggle/carvana')
+    #ds[0][0].show()
+    #ds[0][1].show()
+    from PIL import Image
+    img = ds[0][0]
+    simg = img.resize((256, 256), Image.NEAREST)
+    simg.show()
+
+    import numpy as np
+    nimg = np.array(simg)
+    nimg = nimg.transpose((2, 0, 1))
+    nimg = nimg.reshape((1, 3, 256, 256))
+
+    import torch
+    vimg = torch.from_numpy(nimg).float()
+    timg = torch.autograd.Variable(vimg.cuda())
+
+    model = unet_256().cuda()
+    print(model(timg))
+
+    nret = timg.data.cpu().numpy()[0].transpose((1, 2, 0)).astype(int)
+    iret = Image.fromarray(nret, mode = 'RGB')
+    iret.show()
