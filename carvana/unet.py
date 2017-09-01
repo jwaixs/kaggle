@@ -120,6 +120,6 @@ if __name__ == '__main__':
     model = unet_256().cuda()
     print(model(timg))
 
-    nret = timg.data.cpu().numpy()[0].transpose((1, 2, 0)).astype(int)
-    iret = Image.fromarray(nret, mode = 'RGB')
+    nret = timg.data.cpu().numpy()[0][0]
+    iret = Image.fromarray(nret, mode = 'L')
     iret.show()
