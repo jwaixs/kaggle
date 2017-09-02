@@ -12,8 +12,8 @@ train_dataset = CARVANA(
     root = '/data/noud/kaggle/carvana',
     subset = 'train',
     transform = transforms.Compose([
-        transforms.Scale(1024),
-        transforms.RandomCrop((1024, 1024)),
+        transforms.Scale(300),
+        transforms.CenterCrop(256),
         transforms.ToTensor()
     ])
 )
@@ -41,6 +41,7 @@ optimizer = torch.optim.SGD(
 def train(train_loader, model, criterion, optimizer, epoch):
     model.train()
 
+    lloss = list()
     pbar = tqdm(train_loader)
     for inputs, targets in pbar:
         inputs = Variable(inputs.cuda())
@@ -53,7 +54,10 @@ def train(train_loader, model, criterion, optimizer, epoch):
         loss.backward()
         optimizer.step()
 
-        print(loss)
+        lloss.append(loss.data[0])
+        pbar.set_description('Loss: {}'.format(sum(lloss) / len(lloss)))
+
+    return model
 
 for epoch in range(5):
     print(epoch)
