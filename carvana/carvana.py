@@ -31,11 +31,11 @@ class CARVANA(Dataset):
 
         if self.transform is not None:
             img = self.transform(img)
-            mask = self.transform(img)
+            mask = self.transform(mask)
 
         return img, mask
 
     def __len__(self):
         return len(self.data_path)
 
-ds = CARVANA('/data/noud/kaggle/carvana/')
+#ds = CARVANA('/data/noud/kaggle/carvana/')
