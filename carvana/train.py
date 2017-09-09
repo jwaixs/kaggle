@@ -65,5 +65,6 @@ def train(train_loader, model, criterion, optimizer, epoch):
 for epoch in range(10):
     model = train(train_loader, model, criterion, optimizer, epoch)
 
-    train(train_loader, model, criterion, optimizer, epoch)
+    for param_group in optimizer.param_groups:
+        param_group['lr'] *= 0.9
 
