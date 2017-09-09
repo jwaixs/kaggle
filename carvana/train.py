@@ -56,7 +56,9 @@ def train(train_loader, model, criterion, optimizer, epoch):
         optimizer.step()
 
         lloss.append(loss.data[0])
-        pbar.set_description('Loss: {}'.format(sum(lloss) / len(lloss)))
+        pbar.set_description('Epoch: {} Loss: {}'.format(
+            epoch, sum(lloss) / len(lloss))
+        )
 
     return model
 
