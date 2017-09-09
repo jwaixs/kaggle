@@ -44,6 +44,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
     lloss = list()
     pbar = tqdm(train_loader)
     for inputs, targets in pbar:
+        targets /= targets.max()
         inputs = Variable(inputs.cuda())
         targets = Variable(targets.cuda())
 
