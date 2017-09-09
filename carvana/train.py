@@ -68,3 +68,13 @@ for epoch in range(10):
     for param_group in optimizer.param_groups:
         param_group['lr'] *= 0.9
 
+from PIL import Image
+inputs, targets = next(iter(train_loader))
+targets /= targets.max()
+ret2 = transforms.ToNumpy()(targets)
+i2 = Image.fromarray(255 * ret2[0][0])
+i2.show()
+outputs = model(Variable(inputs.cuda()))
+ret = transforms.ToNumpy()(outputs)
+i1 = Image.fromarray(255 * ret[0][0] / ret.max())
+i1.show()
