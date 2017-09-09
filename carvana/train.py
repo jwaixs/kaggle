@@ -5,7 +5,7 @@ from torchvision import transforms
 from tqdm import tqdm
 
 from carvana import CARVANA
-from unet import unet_256
+from unet import unet_256_small, unet_256
 from criterion import diceLoss
 
 train_dataset = CARVANA(
