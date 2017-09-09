@@ -62,8 +62,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
     return model
 
-for epoch in range(5):
-    print(epoch)
+for epoch in range(10):
+    model = train(train_loader, model, criterion, optimizer, epoch)
 
     train(train_loader, model, criterion, optimizer, epoch)
 
