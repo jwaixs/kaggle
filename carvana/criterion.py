@@ -16,5 +16,6 @@ class diceLoss(nn.Module):
         res = 2. * (intersection.sum(1) + 1) \
             / (inputs.sum(1) + targets.sum(1) + 1)
 
-        return res.sum() / size if self.size_average else res
+        # Something is wrong here with the signs, check in the near future!
+        return (1 - res.sum() / size) if self.size_average else -res
             
