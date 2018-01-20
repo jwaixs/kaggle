@@ -33,6 +33,8 @@ class CARVANA(Dataset):
             img = self.transform(img)
             mask = self.transform(mask)
 
+        mask /= mask.max() # set mask variables between 0 and 1
+
         return img, mask
 
     def __len__(self):

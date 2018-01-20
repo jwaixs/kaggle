@@ -1,4 +1,5 @@
 import torch
+torch.manual_seed(37)
 
 from torch.autograd import Variable
 from torchvision import transforms
@@ -6,13 +7,13 @@ from tqdm import tqdm
 
 from carvana import CARVANA
 from unet import unet_256_small, unet_256
-from criterion import diceLoss
+from criterion import diceLoss, BCELossLogits2d
 
 train_dataset = CARVANA(
     root = '/data/noud/kaggle/carvana',
-    subset = 'train',
+    subset = 'small_test',
     transform = transforms.Compose([
-        transforms.Scale(300),
+        transforms.Scale(256),
         transforms.CenterCrop(256),
         transforms.ToTensor()
     ])
@@ -26,7 +27,7 @@ train_loader = torch.utils.data.DataLoader(
     num_workers = 4
 )
 
-model = unet_256().cuda()
+model = unet_256_small().cuda()
 criterion = {
     'loss' : diceLoss(),
     'acc' : diceLoss()
@@ -34,7 +35,7 @@ criterion = {
 optimizer = torch.optim.SGD(
     model.parameters(),
     weight_decay = 0.05,
-    lr = 0.001,
+    lr = 0.05,
     momentum = 0.99
 )
 
@@ -44,7 +45,6 @@ def train(train_loader, model, criterion, optimizer, epoch):
     lloss = list()
     pbar = tqdm(train_loader)
     for inputs, targets in pbar:
-        targets /= targets.max()
         inputs = Variable(inputs.cuda())
         targets = Variable(targets.cuda())
 
@@ -56,13 +56,13 @@ def train(train_loader, model, criterion, optimizer, epoch):
         optimizer.step()
 
         lloss.append(loss.data[0])
-        pbar.set_description('Epoch: {} Loss: {}'.format(
-            epoch, sum(lloss) / len(lloss))
-        )
+        pbar.set_description('Epoch: {} Loss: {:.4f} Learning rate: {:.4f}'.format(
+            epoch, sum(lloss) / len(lloss), optimizer.param_groups[0]['lr']
+        ))
 
     return model
 
-for epoch in range(10):
+for epoch in range(100):
     model = train(train_loader, model, criterion, optimizer, epoch)
 
     for param_group in optimizer.param_groups:
@@ -70,11 +70,12 @@ for epoch in range(10):
 
 from PIL import Image
 inputs, targets = next(iter(train_loader))
-targets /= targets.max()
-ret2 = transforms.ToNumpy()(targets)
-i2 = Image.fromarray(255 * ret2[0][0])
-i2.show()
-outputs = model(Variable(inputs.cuda()))
-ret = transforms.ToNumpy()(outputs)
-i1 = Image.fromarray(255 * ret[0][0] / ret.max())
-i1.show()
+for i in range(4):
+    targets /= targets.max()
+    ret2 = transforms.ToNumpy()(targets)
+    i2 = Image.fromarray(255 * ret2[i][0])
+    i2.show()
+    outputs = model(Variable(inputs.cuda()))
+    ret = transforms.ToNumpy()(outputs)
+    i1 = Image.fromarray(255 * ret[i][0] / ret.max())
+    i1.show()
