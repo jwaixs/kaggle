@@ -31,6 +31,10 @@ class LabeledLineSentence(object):
         self.data_frames = data_frames
         self.label = label
 
+    def __len__(self):
+        lengths = map(lambda df : df.shape[0], self.data_frames)
+        return sum(lengths)
+
     def __iter__(self):
         i = 0
         for df in self.data_frames:
@@ -49,17 +53,32 @@ class LabeledLineSentence(object):
 def main(args):
     data_frames = map(lambda csv : pd.read_csv(csv), args.df)
     lls = LabeledLineSentence(data_frames, args.label)
-    for i in lls:
-        print(i)
+
+    print('Initialize doc2vec model.')
+    doc2vec_model = gensim.models.Doc2Vec(
+        alpha = .025, min_alpha = .025, min_count = 1
+    )
+
+    print('Build vocabular.')
+    doc2vec_model.build_vocab(lls)
+
+    print('Start training doc2vec model.')
+    doc2vec_model.train(
+        lls, total_examples = len(lls), epochs = args.num_epochs
+    )
+
+    doc2vec_model.save(args.output)
+    print('Done! Saving doc2vec model to {}.'.format(args.output))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description = 'Train a doc2vec classifier'
     )
     parser.add_argument(
-        '--df', metavar = '...', type = str, nargs = '+',
+        '--df', type = str, nargs = '+',
         help = 'List of pandas data frames'
     )
+    parser.add_argument('--num-epochs', type = int, default = 10)
     parser.add_argument(
         '--label', type = str, help = 'Label to extract from data frames'
     )
