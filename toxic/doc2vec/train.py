@@ -4,6 +4,8 @@ import argparse
 import gensim
 import re
 
+import pandas as pd
+
 def tokenizer(raw_doc):
     '''Tokenize a raw document string to list of list of words.
     
@@ -24,8 +26,31 @@ def tokenizer(raw_doc):
         sentences[i] = map(lambda w : w.lower(), sentences[i])
     return sentences
 
+class LabeledLineSentence(object):
+    def __init__(self, data_frames, label):
+        self.data_frames = data_frames
+        self.label = label
+
+    def __iter__(self):
+        i = 0
+        for df in self.data_frames:
+            for _, row in df.iterrows():
+                sentences = tokenizer(row[self.label])
+                for sentence in sentences:
+                    if len(sentence) <= 1:
+                        continue
+
+                    labeled_sentence = gensim.models.doc2vec.LabeledSentence(
+                        sentence, tags = ['SENT_{}'.format(i)]
+                    )
+                    yield labeled_sentence
+                    i += 1
+
 def main(args):
-    pass
+    data_frames = map(lambda csv : pd.read_csv(csv), args.df)
+    lls = LabeledLineSentence(data_frames, args.label)
+    for i in lls:
+        print(i)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
