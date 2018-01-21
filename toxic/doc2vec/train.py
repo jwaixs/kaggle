@@ -6,6 +6,8 @@ import re
 
 import pandas as pd
 
+from tqdm import tqdm
+
 def tokenizer(raw_doc):
     '''Tokenize a raw document string to list of list of words.
     
@@ -18,12 +20,16 @@ def tokenizer(raw_doc):
          ['ill', 'have', 'your', 'account', 'terminated']]
         
     '''
-    sentences = re.findall(r'(?ms)\s*(.*?(?:\.|\?|!))', raw_doc)
+    if len(raw_doc) > 10000:
+        sentences = re.findall(r'(?ms)\s*(.*?(?:\.|\?|!))', raw_doc[:10000] + '.')
+    else:
+        sentences = re.findall(r'(?ms)\s*(.*?(?:\.|\?|!))', raw_doc + '.')
     sentences = map(lambda s : s.split(), sentences)
     remove_non_alpha = re.compile('[^a-zA-Z0-9]')
     for i, s in enumerate(sentences):
         sentences[i] = map(lambda w : remove_non_alpha.sub('', w), s)
         sentences[i] = map(lambda w : w.lower(), sentences[i])
+    sentences = filter(lambda s : len(s[0]) != 0, sentences)
     return sentences
 
 class LabeledLineSentence(object):
@@ -38,8 +44,8 @@ class LabeledLineSentence(object):
     def __iter__(self):
         i = 0
         for df in self.data_frames:
-            for _, row in df.iterrows():
-                sentences = tokenizer(row[self.label])
+            for _, row in tqdm(df.iterrows()):
+                sentences = tokenizer(str(row[self.label]))
                 for sentence in sentences:
                     if len(sentence) <= 1:
                         continue
